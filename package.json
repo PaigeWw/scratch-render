@@ -1,0 +1,78 @@
+{
+  "_from": "scratch-render@latest",
+  "_id": "scratch-render@0.1.0-prerelease.1497393808",
+  "_inBundle": false,
+  "_integrity": "sha1-TAu4BL7SuKZb/CBBh+jFWkzixxE=",
+  "_location": "/scratch-render",
+  "_phantomChildren": {},
+  "_requested": {
+    "type": "tag",
+    "registry": true,
+    "raw": "scratch-render@latest",
+    "name": "scratch-render",
+    "escapedName": "scratch-render",
+    "rawSpec": "latest",
+    "saveSpec": null,
+    "fetchSpec": "latest"
+  },
+  "_requiredBy": [
+    "#DEV:/"
+  ],
+  "_resolved": "https://registry.npmjs.org/scratch-render/-/scratch-render-0.1.0-prerelease.1497393808.tgz",
+  "_shasum": "4c0bb804bed2b8a65bfc204187e8c55a4ce2c711",
+  "_spec": "scratch-render@latest",
+  "_where": "C:\\Users\\Wyp\\WebstormProjects\\v2-gui",
+  "author": {
+    "name": "Massachusetts Institute of Technology"
+  },
+  "bugs": {
+    "url": "https://github.com/LLK/scratch-render/issues"
+  },
+  "bundleDependencies": false,
+  "deprecated": false,
+  "description": "WebGL Renderer for Scratch 3.0",
+  "devDependencies": {
+    "babel-core": "^6.23.1",
+    "babel-eslint": "^7.1.1",
+    "babel-loader": "^6.3.2",
+    "babel-polyfill": "^6.22.0",
+    "babel-preset-es2015": "^6.22.0",
+    "base64-loader": "^1.0.0",
+    "copy-webpack-plugin": "^4.0.1",
+    "docdash": "^0.4.0",
+    "eslint": "^3.16.1",
+    "eslint-config-scratch": "^3.1.0",
+    "gh-pages": "^0.12.0",
+    "hull.js": "0.2.10",
+    "jsdoc": "^3.4.3",
+    "json": "^9.0.4",
+    "raw-loader": "^0.5.1",
+    "scratch-render-fonts": "git+https://github.com/LLK/scratch-render-fonts.git",
+    "tap": "^10.3.0",
+    "travis-after-all": "^1.4.4",
+    "twgl.js": "3.3.0",
+    "webpack": "^2.2.1",
+    "webpack-dev-server": "^2.4.1"
+  },
+  "homepage": "https://github.com/LLK/scratch-render#readme",
+  "license": "BSD-3-Clause",
+  "main": "./dist/node/scratch-render.js",
+  "name": "scratch-render",
+  "repository": {
+    "type": "git",
+    "url": "git+ssh://git@github.com/LLK/scratch-render.git",
+    "sha": "80299b1a2b8673349c7e4f8a74638d561393b79c"
+  },
+  "scripts": {
+    "build": "webpack --progress --colors",
+    "docs": "jsdoc -c .jsdoc.json",
+    "lint": "eslint .",
+    "prepublish": "npm run build",
+    "prepublish-watch": "npm run watch",
+    "start": "webpack-dev-server",
+    "test": "npm run lint && npm run docs",
+    "version": "json -f package.json -I -e \"this.repository.sha = '$(git log -n1 --pretty=format:%H)'\"",
+    "watch": "webpack --progress --colors --watch --watch-poll"
+  },
+  "version": "0.1.0-prerelease.1497393808"
+}
