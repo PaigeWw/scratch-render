@@ -32,16 +32,16 @@ class ShaderManager {
      * @param {int} effectBits Bitmask representing the enabled effects.
      * @returns {ProgramInfo} The shader's program info.
      */
-    getShader (drawMode, effectBits) {
+    getShader (drawMode, effectBits, gl) {
         const cache = this._shaderCache[drawMode];
-        
+
         if (drawMode === ShaderManager.DRAW_MODE.silhouette) {
             // Silhouette mode isn't affected by these effects.
             effectBits &= ~(ShaderManager.EFFECT_INFO.color.mask | ShaderManager.EFFECT_INFO.brightness.mask);
         }
         let shader = cache[effectBits];
         if (!shader) {
-            shader = cache[effectBits] = this._buildShader(drawMode, effectBits);
+            shader = cache[effectBits] = this._buildShader(drawMode, effectBits, gl);
         }
         return shader;
     }
@@ -53,7 +53,7 @@ class ShaderManager {
      * @returns {ProgramInfo} The new shader's program info.
      * @private
      */
-    _buildShader (drawMode, effectBits) {
+    _buildShader (drawMode, effectBits, gl) {
         const numEffects = ShaderManager.EFFECTS.length;
 
         const defines = [
@@ -69,6 +69,10 @@ class ShaderManager {
         const vsFullText = definesText + vertexShaderText;
         const fsFullText = definesText + fragmentShaderText;
 
+        if(gl){
+            console.log('新的webGL对象createProgramInfo');
+            return twgl.createProgramInfo(gl, [vsFullText, fsFullText]);
+        }
         return twgl.createProgramInfo(this._gl, [vsFullText, fsFullText]);
     }
 }

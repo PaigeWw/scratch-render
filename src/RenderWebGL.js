@@ -102,12 +102,16 @@ class RenderWebGL extends EventEmitter {
         /** @type {HTMLCanvasElement} */
         this._tempCanvas = document.createElement('canvas');
 
+        this._thumbnailCanvas = document.createElement('canvas');
+        this._thumbnailCanvas.width = 480;
+        this._thumbnailCanvas.height = 800;
+
         this._createGeometry();
 
         this.on(RenderConstants.Events.NativeSizeChanged, this.onNativeSizeChanged);
 
         this.setBackgroundColor(1, 1, 1);
-        this.setStageSize(xLeft || -240, xRight || 240, yBottom || -180, yTop || 180);
+        this.setStageSize(xLeft || -240, xRight || 240, yBottom || -400, yTop || 400);
         this.resize(this._nativeSize[0], this._nativeSize[1]);
         this.createChecker();
 
@@ -419,7 +423,6 @@ class RenderWebGL extends EventEmitter {
         gl.clear(gl.COLOR_BUFFER_BIT);
 
         this._drawThese(this._drawList, ShaderManager.DRAW_MODE.default, this._projection);
-        //this.thumbnail = gl.canvas.toDataURL('image/png');
     }
 
     /**
@@ -992,6 +995,53 @@ class RenderWebGL extends EventEmitter {
         skin.drawStamp(stampCanvas, bounds.left, bounds.top);
     }
 
+    /**
+     * createThumbnail 生成缩略图
+     * @returns {string}
+     *   draw () {
+        const gl = this._gl;
+
+        twgl.bindFramebufferInfo(gl, null);
+        gl.viewport(0, 0, gl.canvas.width, gl.canvas.height);
+        gl.clearColor.apply(gl, this._backgroundColor);
+        gl.clear(gl.COLOR_BUFFER_BIT);
+
+        this._drawThese(this._drawList, ShaderManager.DRAW_MODE.default, this._projection);
+    }
+     */
+    createThumbnail(){
+        const gl = this._gl;
+        twgl.bindFramebufferInfo(gl, null);
+        const width = this._nativeSize[0];
+        const height = this._nativeSize[1];
+        const xLeft = this._xLeft;
+        const  xRight = this._xRight;
+        const yBottom = this._yBottom;
+        const  yTop= this._yTop;
+        const projection =  twgl.m4.ortho(xLeft, xRight, yTop, yBottom, -1, 1);
+
+        // Limit size of viewport to the bounds around the stamp Drawable and create the projection matrix for the draw.
+        gl.viewport(0, 0, width, height);
+        gl.clearColor(0, 0, 0, 0);
+        gl.clear(gl.COLOR_BUFFER_BIT);
+        this._drawThese(this._drawList, ShaderManager.DRAW_MODE.default, projection);
+
+        const thumbnailPixels = new Uint8Array(Math.floor(width * height * 4));
+        gl.readPixels(0, 0, width, height, gl.RGBA, gl.UNSIGNED_BYTE, thumbnailPixels);
+
+        const thumbnailCanvas = this._thumbnailCanvas;
+        thumbnailCanvas.width = width;
+        thumbnailCanvas.height = height;
+
+        const thumbnailContext = thumbnailCanvas.getContext('2d');
+        const thumbnailImageData = thumbnailContext.createImageData(width, height);
+        thumbnailImageData.data.set(thumbnailPixels);
+        thumbnailContext.putImageData(thumbnailImageData, 0, 0);
+        thumbnailContext.setTransform(1,Math.PI/6,-Math.PI/6,1,0,0);
+
+        return thumbnailCanvas.toDataURL('image/png');
+    }
+
     /* ******
      * Truly internal functions: these support the functions above.
      ********/
@@ -1072,6 +1122,7 @@ class RenderWebGL extends EventEmitter {
     _drawThese (drawables, drawMode, projection, opts = {}) {
         // console.log(this._allDrawables);
         const gl = this._gl;
+
         let currentShader = null;
         this.setDrawableOrder(this._CheckerDrawableId, this._nextDrawableId);
         const numDrawables = drawables.length;
@@ -1094,7 +1145,9 @@ class RenderWebGL extends EventEmitter {
 
             let effectBits = drawable.getEnabledEffects();
             effectBits &= opts.hasOwnProperty('effectMask') ? opts.effectMask : effectBits;
+
             const newShader = this._shaderManager.getShader(drawMode, effectBits);
+
             if (currentShader !== newShader) {
                 currentShader = newShader;
                 gl.useProgram(currentShader.program);

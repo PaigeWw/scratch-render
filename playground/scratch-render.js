@@ -11873,7 +11873,7 @@ var ShaderManager = function () {
 
     _createClass(ShaderManager, [{
         key: 'getShader',
-        value: function getShader(drawMode, effectBits) {
+        value: function getShader(drawMode, effectBits, gl) {
             var cache = this._shaderCache[drawMode];
 
             if (drawMode === ShaderManager.DRAW_MODE.silhouette) {
@@ -11882,7 +11882,7 @@ var ShaderManager = function () {
             }
             var shader = cache[effectBits];
             if (!shader) {
-                shader = cache[effectBits] = this._buildShader(drawMode, effectBits);
+                shader = cache[effectBits] = this._buildShader(drawMode, effectBits, gl);
             }
             return shader;
         }
@@ -11897,7 +11897,7 @@ var ShaderManager = function () {
 
     }, {
         key: '_buildShader',
-        value: function _buildShader(drawMode, effectBits) {
+        value: function _buildShader(drawMode, effectBits, gl) {
             var numEffects = ShaderManager.EFFECTS.length;
 
             var defines = ['#define DRAW_MODE_' + drawMode];
@@ -11911,6 +11911,10 @@ var ShaderManager = function () {
             var vsFullText = definesText + vertexShaderText;
             var fsFullText = definesText + fragmentShaderText;
 
+            if (gl) {
+                console.log('新的webGL对象createProgramInfo');
+                return twgl.createProgramInfo(gl, [vsFullText, fsFullText]);
+            }
             return twgl.createProgramInfo(this._gl, [vsFullText, fsFullText]);
         }
     }]);
@@ -14257,12 +14261,16 @@ var RenderWebGL = function (_EventEmitter) {
         /** @type {HTMLCanvasElement} */
         _this._tempCanvas = document.createElement('canvas');
 
+        _this._thumbnailCanvas = document.createElement('canvas');
+        _this._thumbnailCanvas.width = 480;
+        _this._thumbnailCanvas.height = 800;
+
         _this._createGeometry();
 
         _this.on(RenderConstants.Events.NativeSizeChanged, _this.onNativeSizeChanged);
 
         _this.setBackgroundColor(1, 1, 1);
-        _this.setStageSize(xLeft || -240, xRight || 240, yBottom || -180, yTop || 180);
+        _this.setStageSize(xLeft || -240, xRight || 240, yBottom || -400, yTop || 400);
         _this.resize(_this._nativeSize[0], _this._nativeSize[1]);
         _this.createChecker();
 
@@ -14637,7 +14645,6 @@ var RenderWebGL = function (_EventEmitter) {
             gl.clear(gl.COLOR_BUFFER_BIT);
 
             this._drawThese(this._drawList, ShaderManager.DRAW_MODE.default, this._projection);
-            this.thumbnail = gl.canvas.toDataURL('image/png');
         }
 
         /**
@@ -15231,6 +15238,54 @@ var RenderWebGL = function (_EventEmitter) {
             skin.drawStamp(stampCanvas, bounds.left, bounds.top);
         }
 
+        /**
+         * createThumbnail 生成缩略图
+         * @returns {string}
+         *   draw () {
+            const gl = this._gl;
+             twgl.bindFramebufferInfo(gl, null);
+            gl.viewport(0, 0, gl.canvas.width, gl.canvas.height);
+            gl.clearColor.apply(gl, this._backgroundColor);
+            gl.clear(gl.COLOR_BUFFER_BIT);
+             this._drawThese(this._drawList, ShaderManager.DRAW_MODE.default, this._projection);
+        }
+         */
+
+    }, {
+        key: 'createThumbnail',
+        value: function createThumbnail() {
+            var gl = this._gl;
+            twgl.bindFramebufferInfo(gl, null);
+            var width = this._nativeSize[0];
+            var height = this._nativeSize[1];
+            var xLeft = this._xLeft;
+            var xRight = this._xRight;
+            var yBottom = this._yBottom;
+            var yTop = this._yTop;
+            var projection = twgl.m4.ortho(xLeft, xRight, yTop, yBottom, -1, 1);
+
+            // Limit size of viewport to the bounds around the stamp Drawable and create the projection matrix for the draw.
+            gl.viewport(0, 0, width, height);
+            gl.clearColor(0, 0, 0, 0);
+            gl.clear(gl.COLOR_BUFFER_BIT);
+            this._drawThese(this._drawList, ShaderManager.DRAW_MODE.default, projection);
+
+            var thumbnailPixels = new Uint8Array(Math.floor(width * height * 4));
+            gl.readPixels(0, 0, width, height, gl.RGBA, gl.UNSIGNED_BYTE, thumbnailPixels);
+
+            var thumbnailCanvas = this._thumbnailCanvas;
+            thumbnailCanvas.width = width;
+            thumbnailCanvas.height = height;
+
+            var thumbnailContext = thumbnailCanvas.getContext('2d');
+            var thumbnailImageData = thumbnailContext.createImageData(width, height);
+            thumbnailImageData.data.set(thumbnailPixels);
+            thumbnailContext.putImageData(thumbnailImageData, 0, 0);
+            thumbnailContext.setTransform(1, Math.PI / 6, -Math.PI / 6, 1, 0, 0);
+
+            return thumbnailCanvas.toDataURL('image/png');
+        }
+
         /* ******
          * Truly internal functions: these support the functions above.
          ********/
@@ -15307,6 +15362,7 @@ var RenderWebGL = function (_EventEmitter) {
 
             // console.log(this._allDrawables);
             var gl = this._gl;
+
             var currentShader = null;
             this.setDrawableOrder(this._CheckerDrawableId, this._nextDrawableId);
             var numDrawables = drawables.length;
@@ -15329,7 +15385,9 @@ var RenderWebGL = function (_EventEmitter) {
 
                 var effectBits = _drawable3.getEnabledEffects();
                 effectBits &= opts.hasOwnProperty('effectMask') ? opts.effectMask : effectBits;
+
                 var newShader = this._shaderManager.getShader(drawMode, effectBits);
+
                 if (currentShader !== newShader) {
                     currentShader = newShader;
                     gl.useProgram(currentShader.program);
