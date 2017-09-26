@@ -9683,8 +9683,6 @@ var RenderWebGL = function (_EventEmitter) {
         _this._tempCanvas = document.createElement('canvas');
 
         _this._thumbnailCanvas = document.createElement('canvas');
-        _this._thumbnailCanvas.width = 480;
-        _this._thumbnailCanvas.height = 800;
 
         _this._createGeometry();
 
@@ -10689,7 +10687,12 @@ var RenderWebGL = function (_EventEmitter) {
             gl.viewport(0, 0, width, height);
             gl.clearColor(0, 0, 0, 0);
             gl.clear(gl.COLOR_BUFFER_BIT);
-            this._drawThese(this._drawList, ShaderManager.DRAW_MODE.default, projection);
+            try {
+                gl.disable(gl.BLEND);
+                this._drawThese(this._drawList, ShaderManager.DRAW_MODE.default, projection);
+            } finally {
+                gl.enable(gl.BLEND);
+            }
 
             var thumbnailPixels = new Uint8Array(Math.floor(width * height * 4));
             gl.readPixels(0, 0, width, height, gl.RGBA, gl.UNSIGNED_BYTE, thumbnailPixels);
@@ -10699,12 +10702,12 @@ var RenderWebGL = function (_EventEmitter) {
             thumbnailCanvas.height = height;
 
             var thumbnailContext = thumbnailCanvas.getContext('2d');
+            console.log(width, height);
             var thumbnailImageData = thumbnailContext.createImageData(width, height);
             thumbnailImageData.data.set(thumbnailPixels);
             thumbnailContext.putImageData(thumbnailImageData, 0, 0);
-            thumbnailContext.setTransform(1, Math.PI / 6, -Math.PI / 6, 1, 0, 0);
 
-            return thumbnailCanvas.toDataURL('image/png');
+            return thumbnailCanvas;
         }
 
         /* ******

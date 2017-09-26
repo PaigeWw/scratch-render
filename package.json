@@ -74,5 +74,8 @@
     "version": "json -f package.json -I -e \"this.repository.sha = '$(git log -n1 --pretty=format:%H)'\"",
     "watch": "webpack --progress --colors --watch --watch-poll"
   },
-  "version": "0.1.0-prerelease.1497393808"
+  "version": "0.1.0-prerelease.1497393808",
+  "dependencies": {
+    "blueimp-canvas-to-blob": "^3.14.0"
+  }
 }
