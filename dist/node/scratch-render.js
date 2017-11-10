@@ -9673,6 +9673,20 @@ var RenderWebGL = function (_EventEmitter) {
         /** @type {int} */
         _this._nextSkinId = RenderConstants.ID_NONE + 1;
 
+        /**
+         * The ID of the renderer Drawable corresponding to the pen layer.
+         * @type {int}
+         * @private
+         */
+        _this._penDrawableId = -1;
+
+        /**
+         * The ID of the renderer Skin corresponding to the pen layer.
+         * @type {int}
+         * @private
+         */
+        _this._penSkinId = -1;
+
         /** @type {module:twgl/m4.Mat4} */
         _this._projection = twgl.m4.identity();
 
@@ -9844,6 +9858,19 @@ var RenderWebGL = function (_EventEmitter) {
             this._allSkins[skinId] = newSkin;
             return skinId;
         }
+    }, {
+        key: 'getPenSkinId',
+        value: function getPenSkinId() {
+            if (this._penSkinId < 0) {
+                this._penSkinId = this.createPenSkin();
+                this._penDrawableId = this.createDrawable();
+                this.setDrawableOrder(this._penDrawableId, 1);
+                this.updateDrawableProperties(this._penDrawableId, { skinId: this._penSkinId });
+            }
+            // console.log('_penSkinId--->',this._penSkinId);
+            return this._penSkinId;
+        }
+
         /**
          * Create a new Checker
          * @returns {!int} the ID for the checker.
@@ -9922,6 +9949,8 @@ var RenderWebGL = function (_EventEmitter) {
             if (id !== null) {
                 var checker = this._allDrawables[id];
                 checker.setVisible(visible);
+            } else {
+                this.createCheckerSkin();
             }
         }
         /**
@@ -10678,7 +10707,8 @@ var RenderWebGL = function (_EventEmitter) {
         key: 'createThumbnail',
         value: function createThumbnail() {
             var gl = this._gl;
-            twgl.bindFramebufferInfo(gl, null);
+            twgl.bindFramebufferInfo(gl, this._queryBufferInfo);
+
             var width = this._nativeSize[0];
             var height = this._nativeSize[1];
             var xLeft = this._xLeft;
@@ -10687,7 +10717,6 @@ var RenderWebGL = function (_EventEmitter) {
             var yTop = this._yTop;
             var projection = twgl.m4.ortho(xLeft, xRight, yTop, yBottom, -1, 1);
 
-            // Limit size of viewport to the bounds around the stamp Drawable and create the projection matrix for the draw.
             gl.viewport(0, 0, width, height);
             gl.clearColor.apply(gl, this._backgroundColor);
             gl.clear(gl.COLOR_BUFFER_BIT);
@@ -10706,7 +10735,6 @@ var RenderWebGL = function (_EventEmitter) {
             thumbnailCanvas.height = height;
 
             var thumbnailContext = thumbnailCanvas.getContext('2d');
-            console.log(width, height);
             var thumbnailImageData = thumbnailContext.createImageData(width, height);
             thumbnailImageData.data.set(thumbnailPixels);
             thumbnailContext.putImageData(thumbnailImageData, 0, 0);
@@ -12526,8 +12554,8 @@ function convex(pointset) {
         upper = _upperTangent(pointset),
         lower = _lowerTangent(pointset);
     convex = lower.concat(upper);
-    convex.push(pointset[0]);  
-    return convex;  
+    convex.push(pointset[0]);
+    return convex;
 }
 
 module.exports = convex;
@@ -12608,7 +12636,7 @@ Grid.prototype = {
         var cellXY = this.point2CellXY(point),
             cell = this._cells[cellXY[0]][cellXY[1]],
             pointIdxInCell;
-        
+
         for (var i = 0; i < cell.length; i++) {
             if (cell[i][0] === point[0] && cell[i][1] === point[1]) {
                 pointIdxInCell = i;
@@ -12789,7 +12817,7 @@ function _concave(convex, maxSqEdgeLen, maxSearchArea, grid, edgeSkipList) {
             bBoxWidth = bBoxAround[2] - bBoxAround[0];
             bBoxHeight = bBoxAround[3] - bBoxAround[1];
 
-            midPoint = _midPoint(edge, grid.rangePoints(bBoxAround), convex);            
+            midPoint = _midPoint(edge, grid.rangePoints(bBoxAround), convex);
             scaleFactor++;
         }  while (midPoint === null && (maxSearchArea[0] > bBoxWidth || maxSearchArea[1] > bBoxHeight));
 
@@ -12843,7 +12871,7 @@ function hull(pointset, concavity, format) {
     concave = _concave(
         convex, Math.pow(maxEdgeLen, 2),
         maxSearchArea, grid(innerPoints, cellSize), {});
- 
+
     return formatUtil.fromXy(concave, format);
 }
 
@@ -12856,7 +12884,7 @@ module.exports = hull;
 /* 24 */
 /***/ (function(module, exports) {
 
-function ccw(x1, y1, x2, y2, x3, y3) {           
+function ccw(x1, y1, x2, y2, x3, y3) {
     var cw = ((y3 - y1) * (x2 - x1)) - ((y2 - y1) * (x3 - x1));
     return cw > 0 ? true : cw < 0 ? false : true; // colinear
 }

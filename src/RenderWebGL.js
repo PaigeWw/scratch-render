@@ -93,6 +93,20 @@ class RenderWebGL extends EventEmitter {
         /** @type {int} */
         this._nextSkinId = RenderConstants.ID_NONE + 1;
 
+        /**
+         * The ID of the renderer Drawable corresponding to the pen layer.
+         * @type {int}
+         * @private
+         */
+        this._penDrawableId = -1;
+
+        /**
+         * The ID of the renderer Skin corresponding to the pen layer.
+         * @type {int}
+         * @private
+         */
+        this._penSkinId = -1;
+
         /** @type {module:twgl/m4.Mat4} */
         this._projection = twgl.m4.identity();
 
@@ -237,6 +251,18 @@ class RenderWebGL extends EventEmitter {
         this._allSkins[skinId] = newSkin;
         return skinId;
     }
+
+    getPenSkinId (){
+        if (this._penSkinId < 0) {
+            this._penSkinId = this.createPenSkin();
+            this._penDrawableId = this.createDrawable();
+            this.setDrawableOrder(this._penDrawableId, 1);
+            this.updateDrawableProperties(this._penDrawableId, {skinId: this._penSkinId});
+        }
+        // console.log('_penSkinId--->',this._penSkinId);
+        return this._penSkinId;
+    }
+
     /**
      * Create a new Checker
      * @returns {!int} the ID for the checker.
@@ -303,6 +329,8 @@ class RenderWebGL extends EventEmitter {
         if(id !== null) {
             var checker = this._allDrawables[id];
             checker.setVisible(visible);
+        }else{
+            this.createCheckerSkin();
         }
     }
     /**
@@ -1013,7 +1041,8 @@ class RenderWebGL extends EventEmitter {
      */
     createThumbnail(){
         const gl = this._gl;
-        twgl.bindFramebufferInfo(gl, null);
+        twgl.bindFramebufferInfo(gl, this._queryBufferInfo);
+
         const width = this._nativeSize[0];
         const height = this._nativeSize[1];
         const xLeft = this._xLeft;
@@ -1041,7 +1070,6 @@ class RenderWebGL extends EventEmitter {
         thumbnailCanvas.height = height;
 
         const thumbnailContext = thumbnailCanvas.getContext('2d');
-        console.log(width, height);
         const thumbnailImageData = thumbnailContext.createImageData(width, height);
         thumbnailImageData.data.set(thumbnailPixels);
         thumbnailContext.putImageData(thumbnailImageData, 0, 0);
