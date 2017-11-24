@@ -10,7 +10,7 @@ const PenSkin = require('./PenSkin');
 
 class CheckerSkin extends PenSkin {
     /**
-     * Create a Skin which implements a Scratch pen layer.
+     * 创建一个标尺涂层类
      * @param {int} id - The unique ID for this Skin.
      * @param {RenderWebGL} renderer - The renderer which will use this Skin.
      * @extends PenSkin

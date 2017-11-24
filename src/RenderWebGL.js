@@ -6,6 +6,7 @@ const twgl = require('twgl.js');
 const BitmapSkin = require('./BitmapSkin');
 const Drawable = require('./Drawable');
 const PenSkin = require('./PenSkin');
+const EditTargetCenterPointSkin = require('./EditTargetCenterPointSkin');
 const CheckerSkin = require('./CheckerSkin');
 const EditTargetBoxSkin = require('./EditTargetBoxSkin');
 const RenderConstants = require('./RenderConstants');
@@ -84,6 +85,11 @@ class RenderWebGL extends EventEmitter {
         /** @type {int} */
         this._EditTargetBoxDrawableId = null;
 
+        /** @type {int} */
+        this._EditTargetCenterPointSkinId = null;
+        /** @type {int} */
+        this._EditTargetCenterPointDrawableId = null;
+
         /** @type {WebGLRenderingContext} */
         const gl = this._gl = twgl.getWebGLContext(canvas, {alpha: false, stencil: true});
 
@@ -138,6 +144,53 @@ class RenderWebGL extends EventEmitter {
      */
     get gl () {
         return this._gl;
+    }
+
+    /**
+     * reset
+     */
+    reset(){
+        this.destroyDrawable(this._penDrawableId);
+
+        this.destroySkin(this._penSkinId);
+
+        this._allDrawables = [];
+
+        /** @type {Skin[]} */
+        this._allSkins = [];
+
+        /** @type {Array<int>} */
+        this._drawList = [];
+
+        /** @type {int} */
+        this._CheckerDrawableId = null;
+
+        /** @type {int} */
+        this._CheckerSkinId = null;
+
+        /** @type {int} */
+        this._EditTargetBoxSkinId = null;
+        /** @type {int} */
+        this._EditTargetBoxDrawableId = null;
+
+
+        /** @type {int} 当前编辑角色中心点*/
+        this._EditTargetCenterPointSkinId = null;
+        /** @type {int} */
+        this._EditTargetCenterPointDrawableId = null;
+        /**
+         * The ID of the renderer Drawable corresponding to the pen layer.
+         * @type {int}
+         * @private
+         */
+        this._penDrawableId = -1;
+
+        /**
+         * The ID of the renderer Skin corresponding to the pen layer.
+         * @type {int}
+         * @private
+         */
+        this._penSkinId = -1;
     }
 
     /**
@@ -252,6 +305,7 @@ class RenderWebGL extends EventEmitter {
         return skinId;
     }
 
+    //获取画笔图层id
     getPenSkinId (){
         if (this._penSkinId < 0) {
             this._penSkinId = this.createPenSkin();
@@ -261,6 +315,37 @@ class RenderWebGL extends EventEmitter {
         }
         // console.log('_penSkinId--->',this._penSkinId);
         return this._penSkinId;
+    }
+    /**
+     * 创建一个中心点图层
+     * @returns {!int} the ID for the new skin.
+     */
+    createEditTargetCenterPointSkin (editingTarget) {
+        const skinId = this._nextSkinId++;
+        const newSkin = new EditTargetCenterPointSkin(skinId, this, editingTarget);
+        this._allSkins[skinId] = newSkin;
+        return skinId;
+    }
+
+    getEditTargetCenterPointDrawableId (){
+        if (!this._EditTargetCenterPointSkinId ) {
+            this._EditTargetCenterPointSkinId = this.createEditTargetCenterPointSkin();
+            this._EditTargetCenterPointDrawableId = this.createDrawable();
+            this.setDrawableOrder(this._EditTargetCenterPointDrawableId, this._nextDrawableId);
+            this.updateDrawableProperties(this._EditTargetCenterPointDrawableId, {skinId: this._EditTargetCenterPointSkinId});
+        }
+        return this._EditTargetCenterPointDrawableId;
+    }
+
+    updateEditTargetCenterPoint (editingTarget){
+        if (!this._EditTargetCenterPointSkinId ) {
+            this._EditTargetCenterPointSkinId = this.createEditTargetCenterPointSkin(editingTarget);
+            this._EditTargetCenterPointDrawableId = this.createDrawable();
+        }
+        this.setDrawableOrder(this._EditTargetCenterPointDrawableId, this._nextDrawableId);
+        this.updateDrawableProperties(this._EditTargetCenterPointDrawableId, {skinId: this._EditTargetCenterPointSkinId});
+
+        return this._EditTargetCenterPointDrawableId;
     }
 
     /**
@@ -303,7 +388,7 @@ class RenderWebGL extends EventEmitter {
         const origH = costumeSize[1];
 
 
-        console.log("updateEditTargetBoxSkin's  drawable",drawable)
+        // console.log("updateEditTargetBoxSkin's  drawable",drawable)
         this._EditTargetBoxSkinId = this.createEditTargetBoxSkin();
         this._EditTargetBoxDrawableId = this.createDrawable();
 
@@ -329,8 +414,10 @@ class RenderWebGL extends EventEmitter {
         if(id !== null) {
             var checker = this._allDrawables[id];
             checker.setVisible(visible);
+            console.log('checker.setVisible('+visible+')')
         }else{
-            this.createCheckerSkin();
+            this.createChecker();
+            console.log('createCheckerSkin');
         }
     }
     /**
@@ -369,7 +456,7 @@ class RenderWebGL extends EventEmitter {
      */
     destroySkin (skinId) {
         const oldSkin = this._allSkins[skinId];
-        oldSkin.dispose();
+        oldSkin&&oldSkin.dispose&&oldSkin.dispose();
         delete this._allSkins[skinId];
     }
 
@@ -394,7 +481,7 @@ class RenderWebGL extends EventEmitter {
      */
     destroyDrawable (drawableID) {
         const drawable = this._allDrawables[drawableID];
-        drawable.dispose();
+        drawable&&drawable.dispose&&drawable.dispose();
         delete this._allDrawables[drawableID];
 
         let index;
@@ -482,6 +569,18 @@ class RenderWebGL extends EventEmitter {
         }
         return bounds;
     }
+
+
+    /**
+     * Get the current skin (costume) size of a Drawable.
+     * @param {int} drawableID The ID of the Drawable to measure.
+     * @return {Array<number>} Skin size, width and height.
+     */
+    getSkinRotationCenter (drawableID) {
+        const drawable = this._allDrawables[drawableID];
+        return drawable.skin.rotationCenter;
+    }
+
 
     /**
      * Get the current skin (costume) size of a Drawable.
